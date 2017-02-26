@@ -71,8 +71,8 @@ class WordpressToLaravel
      * WordpressToLaravel constructor.
      *
      * @param FractalManager $fractalManager
-     * @param GuzzleClient   $client
-     * @param array          $config
+     * @param GuzzleClient $client
+     * @param array $config
      */
     public function __construct(FractalManager $fractalManager, GuzzleClient $client, array $config)
     {
@@ -104,28 +104,28 @@ class WordpressToLaravel
     }
 
     /**
-     * @param int  $page
-     * @param int  $perPage
+     * @param int $page
+     * @param int $perPage
      * @param bool $truncate
      * @param bool $forceAll
      */
     public function import($page = 1, $perPage = 5, $truncate = false, $forceAll = false)
     {
         $this->truncate($truncate)
-             ->fetchPosts($page, $perPage, $forceAll)
-             ->map(function ($post) {
-                 return $this->transformPost($post);
-             })
-             ->each(function ($post) {
-                 $this->syncPost($post);
-             });
+            ->fetchPosts($page, $perPage, $forceAll)
+            ->map(function ($post) {
+                return $this->transformPost($post);
+            })
+            ->each(function ($post) {
+                $this->syncPost($post);
+            });
     }
 
     /**
      * Setup the getPosts request
      *
-     * @param int  $page
-     * @param int  $perPage
+     * @param int $page
+     * @param int $perPage
      * @param bool $forceAll
      * @return Collection
      */
@@ -140,7 +140,7 @@ class WordpressToLaravel
                 $posts->push($post);
             })->isEmpty();
 
-            if (! $forceAll || $stop) {
+            if (!$forceAll || $stop) {
                 break;
             }
         }
@@ -156,10 +156,21 @@ class WordpressToLaravel
      */
     protected function sendRequest($url)
     {
-        if ($results = $this->client->get($url)) {
-            return json_decode(
-                $results->getBody()
-            );
+
+        if (env('WP_API_USERNAME', false) == false) {
+            if ($results = $this->client->get($url)) {
+                return json_decode(
+                    $results->getBody()
+                );
+            }
+        } else {
+
+            if ($results = $this->client->get($url, ['auth' => [env('WP_API_USERNAME', false), env('WP_API_PASSWORD', false)]])) {
+                return json_decode(
+                    $results->getBody()
+                );
+            }
+
         }
 
         return [];
@@ -205,7 +216,7 @@ class WordpressToLaravel
     protected function transformPost(stdClass $post)
     {
         return $this->fractalManager->createData($this->createPostResource($post))
-                                    ->toArray();
+            ->toArray();
     }
 
     /**
@@ -231,7 +242,7 @@ class WordpressToLaravel
         $categoryData = $data['category'];
         unset($data['tags'], $data['author'], $data['category']);
 
-        if (! $post = ($this->postModel)::where('wp_id', $data['wp_id'])->first()) {
+        if (!$post = ($this->postModel)::where('wp_id', $data['wp_id'])->first()) {
             $post = ($this->postModel)::create($data);
         }
 
