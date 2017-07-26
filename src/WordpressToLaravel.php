@@ -138,7 +138,7 @@ class WordpressToLaravel
                 $this->sendRequest($this->makeUrl($page++, $perPage))
             )->map(function ($post) use ($posts) {
                 $posts->push($post);
-            })->isEmpty();
+            })->count() < $perPage;
 
             if (! $forceAll || $stop) {
                 break;
